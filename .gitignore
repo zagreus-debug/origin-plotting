@@ -1,5 +1,8 @@
 origin_output/
 tests/_out/
+tests/_out_py/
+.mplconfig/
+__pycache__/
 *.opju
 *.pdf
 Thumbs.db

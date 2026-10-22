@@ -9,6 +9,13 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Test the no-Origin plotter
+        run: python tests/test_plot_chem.py
       - name: Validate data, fit, and LabTalk generation
         shell: powershell
         run: .\tests\smoke_test.ps1

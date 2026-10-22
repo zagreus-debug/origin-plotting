@@ -1,133 +1,179 @@
 # origin-plotting
 
-Create publication-ready Origin/OriginPro graphs from tabular data on Windows:
-XY scatter, optional linear fit, a reusable `.opju` project, and watermark-free
-PNG/PDF export.
+Publication-quality chemistry figures from tabular data, **with or without
+Origin**.
 
-This repository is also a Codex skill. Copy the folder to
+- **No Origin?** `scripts/plot_chem.py` renders a clean 300 dpi PNG/PDF with
+  Pillow. No license, watermark, network, NumPy, pandas, or matplotlib needed.
+- **Have Origin?** `scripts/origin_plot.ps1` builds a real `.opju`, exports
+  PNG/PDF, and refuses to deliver a demo-watermarked image.
+
+This repository is also a Codex skill. Copy it to
 `%USERPROFILE%\.codex\skills\origin-plotting` and ask Codex to
-"用 Origin 绘图".
+"用 Origin 绘图" or "画化学实验图".
 
 ## Features
 
-- Reads a CSV with headers; chooses X and Y columns by name.
-- Sorts by X and plots a scatter graph in Origin.
-- Optional linear fit with slope, intercept, R², and equation labels.
-- Saves a reusable `.opju` project.
-- Exports PNG/PDF and refuses to deliver a demo-watermarked image.
-- Uses ASCII staging paths, so Unicode output folders are safe.
+- CSV/TSV/XLSX input; choose X and Y columns by header.
+- Optional Y error bars and scatter/line/line+symbol styles.
+- Fitting: automatic, linear, quadratic, exponential, power, logarithmic,
+  Langmuir (saturation), or none.
+- Auto mode fits every valid model and selects by AICc, preferring the simpler
+  linear model when it is statistically close.
+- 300 dpi PNG/PDF plus a plain-text fit report.
+- Chinese or English labels in the no-Origin renderer.
 
-## Requirements
-
-- Windows 10/11 with Origin or OriginPro installed and **activated**
-- Origin COM automation available (normally true after a normal install)
-- PowerShell 5.1 or later
-- Origin closed before running the script
-
-The script starts and closes its own Origin instance. In Codex, run it in the
-interactive desktop session (escalated if the sandbox account differs from your
-desktop account).
-
-## Usage
+## Install
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\origin_plot.ps1 `
-  -Csv .\examples\clausius_clapeyron.csv `
-  -X invT_K -Y ln_p_p0 `
-  -Title "Saturated Vapor Pressure of Water" `
-  -XLabel "1/T (K^-1)" -YLabel "ln(p/p0)" `
-  -OutDir .\origin_output -Name vapor_pressure -Fit -Pdf
+pip install -r requirements.txt
 ```
 
-This produces:
+Only `Pillow` is needed for plotting; `openpyxl` adds `.xlsx` input. Origin is
+optional. Python 3.9 or later.
 
-```text
-origin_output/
-  vapor_pressure.opju
-  vapor_pressure.png
-  vapor_pressure.pdf
-```
-
-The example data are the 10 water-vapor-pressure points from the original
-worksheet. The fit gives k = -5152.1 K, b = 13.834, R² = 0.99978, and
-ΔvapHm = 42.83 kJ/mol using `ΔvapHm = -kR`.
-
-## Options
-
-| Option | Required | Meaning |
-|---|---|---|
-| `-Csv` | yes | Input CSV with a header row |
-| `-X` | yes | X column name |
-| `-Y` | yes | Y column name |
-| `-Title` | no | Graph title (ASCII) |
-| `-XLabel` / `-YLabel` | no | Axis labels (ASCII); default to column names |
-| `-OutDir` | no | Output folder; default `.\origin_output` |
-| `-Name` | no | Output base name; default `origin_plot` |
-| `-Fit` | no | Add a linear fit line and equation/R² labels |
-| `-Pdf` | no | Also export PDF |
-| `-NoExport` | no | Build/save the project only; no PNG/PDF |
-| `-DryRun` | no | Validate data, compute the fit, and write the LabTalk script; no Origin launch |
-
-Labels and names must be ASCII. Origin mangles non-ASCII text passed through
-LabTalk; use English labels in the Origin graph.
-
-## Behavior and safety
-
-The script refuses to run if Origin is already open, then creates a clean
-project, writes the data and computed fit column, saves the `.opju`, exports,
-and closes the instance it started.
-
-If Origin is in demo/unlicensed mode, `expGraph` fails or the exported PNG
-contains Origin's tiled "demo" watermark. In either case the script exits with
-code `3` and produces **no formal figure**. Activate Origin and rerun.
-
-Exit codes:
-
-- `0` — success
-- `1` — input, path, or Origin automation error
-- `3` — demo/unlicensed origin; no formal figure produced
-
-## Install as a Codex skill
+As a Codex skill:
 
 ```powershell
 Copy-Item -Recurse . "$env:USERPROFILE\.codex\skills\origin-plotting"
 ```
 
-Restart Codex, then ask: `用 Origin 绘图，数据在 data.csv，X 列是 ...`.
+## Quick start without Origin
+
+Clausius-Clapeyron example:
+
+```powershell
+python scripts/plot_chem.py `
+  --input examples/clausius_clapeyron.csv `
+  --x invT_K --y ln_p_p0 --fit auto `
+  --title "Saturated Vapor Pressure of Water" `
+  --xlabel "1/T (K^-1)" --ylabel "ln(p/p0)" `
+  --outdir origin_output --name vapor_pressure
+```
+
+The selected model is `linear`:
+
+```text
+y = -5152 x + 13.83
+R2 = 0.999778
+```
+
+First-order kinetics example:
+
+```powershell
+python scripts/plot_chem.py `
+  --input examples/first_order_kinetics.csv `
+  --x t_s --y A_abs --fit auto `
+  --title "First-order kinetics" --xlabel "t / s" --ylabel "A" `
+  --outdir origin_output --name kinetics
+```
+
+Auto mode selects `exp`:
+
+```text
+y = 0.7997 exp(-0.04984 x)
+R2 = 0.999999
+```
+
+## Fit models
+
+| `--fit` | Model |
+|---|---|
+| `auto` (default) | Fit all valid models, choose by AICc |
+| `none` | Scatter only |
+| `linear` / `线性` | `y = a x + b` |
+| `quad` / `二次` | `y = a x^2 + b x + c` |
+| `exp` / `指数` | `y = a exp(b x)` |
+| `power` / `幂` | `y = a x^b` |
+| `log` / `对数` | `y = a + b ln(x)` |
+| `langmuir` / `饱和` | `y = a x / (b + x)` |
+
+If the user names a model, pass it explicitly. If not, use `auto` and state the
+selected model and constraints in the result.
+
+## Chemistry recipes
+
+| Experiment | Plot |
+|---|---|
+| Clausius-Clapeyron | `ln(p/p0)` vs `1/T`, linear |
+| Arrhenius | `ln(k)` vs `1/T`, linear |
+| First-order kinetics | concentration/absorbance vs time, exponential |
+| Beer-Lambert | absorbance vs concentration, linear |
+| Adsorption saturation | amount adsorbed vs concentration, Langmuir |
+
+Do the physical transform in the data table (for example `1/T` and
+`ln(p/p0)`) so the axes and fitted parameters stay interpretable.
+
+## Main options
+
+| Option | Meaning |
+|---|---|
+| `--input` | CSV/TSV/TXT/XLSX |
+| `--x`, `--y` | Column names |
+| `--yerr` | Optional error column |
+| `--sheet` | XLSX sheet name |
+| `--fit` | Model or `auto` |
+| `--title`, `--xlabel`, `--ylabel` | Labels (Unicode supported) |
+| `--style` | `scatter`, `line`, `line+symbol` |
+| `--data-label`, `--fit-label` | Legend text |
+| `--outdir`, `--name` | Output folder/base name |
+| `--dpi` | 300 by default |
+
+Outputs:
+
+```text
+origin_output/
+  vapor_pressure.png
+  vapor_pressure.pdf
+  vapor_pressure_fit.txt
+```
+
+## Origin project path
+
+Use this only when the user asks for `.opju` or an actual Origin export, and
+Origin is installed and activated:
+
+```powershell
+powershell -File scripts/origin_plot.ps1 `
+  -Csv examples/clausius_clapeyron.csv `
+  -X invT_K -Y ln_p_p0 -Fit `
+  -Title "Saturated Vapor Pressure of Water" `
+  -XLabel "1/T (K^-1)" -YLabel "ln(p/p0)" `
+  -OutDir origin_output -Name vapor_pressure -Pdf
+```
+
+This path supports scatter + linear fit only. Labels and paths must be ASCII
+because Origin mangles non-ASCII LabTalk text. If Origin is in demo mode, the
+script exits `3` and produces no formal figure.
 
 ## Testing
 
-Close Origin, then:
-
 ```powershell
-# Works without Origin (also runs in GitHub Actions)
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\smoke_test.ps1
+# No Origin required
+python tests/test_plot_chem.py
+powershell -File tests/smoke_test.ps1
 
-# Full check on a Windows desktop with activated Origin
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\smoke_test.ps1 -WithOrigin
+# Full Origin integration on an activated Windows desktop
+powershell -File tests/smoke_test.ps1 -WithOrigin
 ```
 
-The default test validates the CSV, fit, LabTalk generation, and input errors.
-`-WithOrigin` additionally builds and reloads the `.opju`, checks the worksheet
-and graph, and verifies the export path. On an unlicensed Origin it confirms
-that demo mode produces no formal figure instead of shipping a watermarked PNG.
+GitHub Actions runs the no-Origin Python test and the PowerShell dry-run test.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| COM error `0x80080005` or a "User Files Folder" dialog | Run as the interactive desktop user; complete Origin's first-launch setup once |
-| "Origin is already running" | Close Origin, or use a machine where the automation instance can be dedicated |
-| Export returns false / no PNG | Activate Origin; demo mode blocks export |
-| Save reports success but no file | Use this script (it calls `$o.Save()`), not `save -i`, and keep Origin paths ASCII |
-| Second plot missing | Use `layer -i200 PlotData_C`; `%(1,3)` can silently do nothing |
-| Axis titles missing | Set column long names before plotting; `layer.x.label$` is unreliable |
+| `Pillow is required` | `pip install pillow` |
+| `.xlsx` input fails | `pip install openpyxl` |
+| Chinese labels show boxes | Install a CJK font (SimHei/Noto Sans CJK); Windows fonts are auto-detected |
+| Auto picks a surprising model | Pass `--fit linear` (or another model) explicitly |
+| Origin COM error / demo watermark | See [SKILL.md](SKILL.md); activate Origin or use the no-Origin plotter |
 
 ## Scope
 
-This tool intentionally covers one job: CSV → XY scatter + optional linear fit
-→ Origin project + PNG/PDF. Multi-panel layouts, 3D plots, error bars, and
-nonlinear fitting are out of scope.
+One X/Y series per figure; multi-panel layouts, 3D plots, and arbitrary
+user-supplied formulas are out of scope. Named models cover common chemistry
+labs.
 
 ## License
 
