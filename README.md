@@ -5,6 +5,7 @@ Origin**.
 
 - **No Origin?** `scripts/plot_chem.py` renders a clean 300 dpi PNG/PDF with
   Pillow. No license, watermark, network, NumPy, pandas, or matplotlib needed.
+  The lightweight PDF is raster; use advanced mode when a vector PDF is needed.
 - **Need advanced layouts?** `scripts/plot_advanced.py` adds multi-panel,
   dual Y, insets, broken axes, 3D, contours, heatmaps, bars, pies, boxes,
   error bands, vector PDF, and arbitrary nonlinear fitting via matplotlib/scipy.
@@ -26,7 +27,8 @@ This repository is also a Codex skill. Copy it to
 - Arbitrary nonlinear formulas with `scipy.optimize.curve_fit` in advanced mode.
 - Auto mode fits every valid model and selects by AICc, preferring the simpler
   linear model when it is statistically close.
-- 300 dpi PNG/PDF plus a plain-text fit report.
+- 300 dpi PNG plus raster PDF and a plain-text fit report (lightweight mode);
+  vector PDF in advanced mode.
 - Chinese or English labels in the no-Origin renderer.
 
 ## Install
@@ -149,7 +151,8 @@ Panel types: `xy`, `bar`, `pie`, `box`, `heatmap`, `contour`, `3d`.
 XY panels support `series`, dual `axis: "right"`, `band`, `fit`, `inset`,
 `broken: {"x": [...]}` or `{"y": [...]}`, custom limits/ticks, and legend
 placement. The advanced renderer writes a true vector PDF for line/text plots;
-heatmaps and surfaces naturally embed raster layers.
+heatmaps and surfaces naturally embed raster layers. Use advanced mode when a
+vector PDF is required; the lightweight `plot_chem.py` PDF is raster-only.
 
 Nonlinear fit example:
 

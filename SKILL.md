@@ -9,11 +9,12 @@ Choose the renderer before doing anything else:
 
 1. **No Origin, or a general chemistry plot** → [scripts/plot_chem.py](scripts/plot_chem.py).
    This is the default. It produces a clean 300 dpi PNG/PDF with Pillow and
-   works without Origin, NumPy, SciPy, pandas, or matplotlib.
+   works without Origin, NumPy, SciPy, pandas, or matplotlib. Its PDF is raster.
 2. **Multi-panel, dual Y, inset, broken axis, 3D, heatmap, contour, bar/pie/
    box, error band, vector PDF, or arbitrary formula fit** →
    [scripts/plot_advanced.py](scripts/plot_advanced.py) with a JSON spec.
    Requires `pip install -r requirements-advanced.txt` (matplotlib + scipy).
+   This is also the path for vector PDF output.
 3. **User explicitly needs a `.opju` or a real Origin export** →
    [scripts/origin_plot.ps1](scripts/origin_plot.ps1), only on a licensed
    Windows Origin installation.
