@@ -5,6 +5,10 @@ description: Create publication-ready chemistry figures from tabular data with o
 
 # Chemistry plotting
 
+This is an agent-neutral skill. `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`,
+`.cursor/rules/`, `.windsurf/rules/`, `.github/copilot-instructions.md`, and
+`CONVENTIONS.md` are thin entrypoints to this file.
+
 Choose the renderer before doing anything else:
 
 1. **No Origin, or a general chemistry plot** → [scripts/plot_chem.py](scripts/plot_chem.py).

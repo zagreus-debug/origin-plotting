@@ -1,0 +1,15 @@
+---
+description: Chemistry plotting and fitting with Origin-style output
+globs: ["**/*.csv", "**/*.tsv", "**/*.xlsx", "**/*.json"]
+alwaysApply: false
+---
+
+# Chemistry plotting
+
+For plotting or fitting tasks, read the repository `SKILL.md` and follow it.
+
+- Simple XY: `scripts/plot_chem.py`
+- Advanced JSON figures/nonlinear fits: `scripts/plot_advanced.py`
+- Real `.opju`: `scripts/origin_plot.ps1` only with licensed Origin
+
+Never deliver a demo-watermarked Origin image.

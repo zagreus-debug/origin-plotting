@@ -12,9 +12,9 @@ Origin**.
 - **Have Origin?** `scripts/origin_plot.ps1` builds a real `.opju`, exports
   PNG/PDF, and refuses to deliver a demo-watermarked image.
 
-This repository is also a Codex skill. Copy it to
-`%USERPROFILE%\.codex\skills\origin-plotting` and ask Codex to
-"用 Origin 绘图" or "画化学实验图".
+This repository is agent-neutral. The canonical instructions are in
+`SKILL.md`; thin adapters are included for Codex, Claude Code, Cursor,
+Gemini CLI, GitHub Copilot, Windsurf and Aider.
 
 ## Features
 
@@ -40,11 +40,40 @@ pip install -r requirements.txt
 Only `Pillow` is needed for plotting; `openpyxl` adds `.xlsx` input. Origin is
 optional. Python 3.9 or later.
 
-As a Codex skill:
+### Agent installation
+
+Install the skill for Codex and Claude Code:
 
 ```powershell
-Copy-Item -Recurse . "$env:USERPROFILE\.codex\skills\origin-plotting"
+.\scripts\install_agent_skill.ps1 -Agent all
 ```
+
+Or install one:
+
+```powershell
+.\scripts\install_agent_skill.ps1 -Agent codex
+.\scripts\install_agent_skill.ps1 -Agent claude
+```
+
+Restart the agent after installation. Then ask:
+`用 Origin 绘图，数据在 data.csv，X 列是 ...`.
+
+### Agent compatibility
+
+| Agent | Entry point |
+|---|---|
+| Codex | `SKILL.md`; install to `~/.codex/skills/origin-plotting` |
+| Claude Code | `.claude/skills/origin-plotting/SKILL.md` or installer |
+| Cursor | `.cursor/rules/origin-plotting.mdc` |
+| Gemini CLI | `GEMINI.md` |
+| GitHub Copilot | `.github/copilot-instructions.md` |
+| Windsurf | `.windsurf/rules/origin-plotting.md` |
+| Aider | `CONVENTIONS.md` |
+| Other agents | `AGENTS.md` then `SKILL.md` |
+| ChatGPT/Claude Projects | Upload `SKILL.md` as project instructions |
+
+The adapters are intentionally short and point to the canonical `SKILL.md`, so
+the plotting rules have one source of truth.
 
 ## Quick start without Origin
 
