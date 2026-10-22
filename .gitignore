@@ -1,6 +1,7 @@
 origin_output/
 tests/_out/
 tests/_out_py/
+tests/_out_adv/
 .mplconfig/
 __pycache__/
 *.opju

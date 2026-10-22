@@ -16,6 +16,10 @@ jobs:
         run: pip install -r requirements.txt
       - name: Test the no-Origin plotter
         run: python tests/test_plot_chem.py
+      - name: Install advanced dependencies
+        run: pip install -r requirements-advanced.txt
+      - name: Test the advanced renderer
+        run: python tests/test_advanced.py
       - name: Validate data, fit, and LabTalk generation
         shell: powershell
         run: .\tests\smoke_test.ps1

@@ -10,7 +10,11 @@ Choose the renderer before doing anything else:
 1. **No Origin, or a general chemistry plot** → [scripts/plot_chem.py](scripts/plot_chem.py).
    This is the default. It produces a clean 300 dpi PNG/PDF with Pillow and
    works without Origin, NumPy, SciPy, pandas, or matplotlib.
-2. **User explicitly needs a `.opju` or a real Origin export** →
+2. **Multi-panel, dual Y, inset, broken axis, 3D, heatmap, contour, bar/pie/
+   box, error band, vector PDF, or arbitrary formula fit** →
+   [scripts/plot_advanced.py](scripts/plot_advanced.py) with a JSON spec.
+   Requires `pip install -r requirements-advanced.txt` (matplotlib + scipy).
+3. **User explicitly needs a `.opju` or a real Origin export** →
    [scripts/origin_plot.ps1](scripts/origin_plot.ps1), only on a licensed
    Windows Origin installation.
 
@@ -52,6 +56,32 @@ Common chemistry transforms belong in the table, not hidden in the model:
 Supports CSV/TSV/XLSX, optional error bars, scatter/line styles, Chinese labels,
 and PNG/PDF plus a `*_fit.txt` report.
 
+## Advanced JSON figures
+
+```powershell
+pip install -r requirements-advanced.txt
+python scripts/plot_advanced.py --spec examples/advanced/advanced_xy.json `
+  --outdir advanced_output --name figure
+```
+
+Use `examples/advanced/advanced_gallery.json` for bar, pie, box, heatmap,
+contour and 3D panels. XY panels support multiple series, `axis: "right"`,
+error bands, insets, `broken: {"x": [...]}` or `{"y": [...]}`, custom limits,
+ticks, colors, alpha and legend placement.
+
+For a custom nonlinear fit, put a safe formula and parameter list in the spec:
+
+```json
+"fit": {
+  "formula": "a*exp(-b*x)+c",
+  "params": ["a", "b", "c"],
+  "p0": [0.7, 0.05, 0.1]
+}
+```
+
+The formula evaluator is AST-whitelisted; it never executes arbitrary Python.
+Advanced line/text PDFs are vector; heatmaps and surfaces embed raster layers.
+
 ## Origin workflow
 
 ```powershell
@@ -90,6 +120,7 @@ Hard-won Origin rules:
 |---|---|---|
 | `Pillow is required` | Missing dependency | `pip install pillow` |
 | `.xlsx` fails | Missing openpyxl | `pip install openpyxl` |
+| Advanced spec imports fail | Missing matplotlib/scipy | `pip install -r requirements-advanced.txt` |
 | Auto picks a surprising model | AICc preference | Pass `--fit` explicitly |
 | COM `0x80080005`, UFF dialog | Sandbox account | Run in the desktop session |
 | Origin export false, no file | Demo/unlicensed | Activate Origin; stop |

@@ -1,0 +1,75 @@
+{
+  "figsize": [12, 7],
+  "layout": {"rows": 2, "cols": 3},
+  "suptitle": "Chemistry plot gallery",
+  "panels": [
+    {
+      "type": "bar",
+      "data": "categories.csv",
+      "x": "cat",
+      "y": "val",
+      "yerr": "err",
+      "xlabel": "category",
+      "ylabel": "value",
+      "title": "Bar with error bars",
+      "colors": ["#4c72b0", "#dd8452", "#55a868", "#c44e52", "#8172b3"]
+    },
+    {
+      "type": "pie",
+      "data": "categories.csv",
+      "labels": "cat",
+      "values": "share",
+      "title": "Pie",
+      "colors": ["#4c72b0", "#dd8452", "#55a868", "#c44e52", "#8172b3"]
+    },
+    {
+      "type": "box",
+      "data": "categories.csv",
+      "series": [
+        {"label": "A", "y": "A"},
+        {"label": "B", "y": "B"}
+      ],
+      "ylabel": "value",
+      "title": "Box plot",
+      "colors": ["#4c72b0", "#dd8452"]
+    },
+    {
+      "type": "heatmap",
+      "data": "surface.csv",
+      "x": "x",
+      "y": "y",
+      "z": "z",
+      "xlabel": "x",
+      "ylabel": "y",
+      "cbar_label": "z",
+      "cmap": "viridis",
+      "title": "Heatmap"
+    },
+    {
+      "type": "contour",
+      "data": "surface.csv",
+      "x": "x",
+      "y": "y",
+      "z": "z",
+      "xlabel": "x",
+      "ylabel": "y",
+      "cbar_label": "z",
+      "levels": 10,
+      "cmap": "plasma",
+      "title": "Contour"
+    },
+    {
+      "type": "3d",
+      "data": "surface.csv",
+      "x": "x",
+      "y": "y",
+      "z": "z",
+      "kind": "surface",
+      "xlabel": "x",
+      "ylabel": "y",
+      "zlabel": "z",
+      "cmap": "viridis",
+      "title": "3D surface"
+    }
+  ]
+}

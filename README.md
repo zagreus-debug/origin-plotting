@@ -5,6 +5,9 @@ Origin**.
 
 - **No Origin?** `scripts/plot_chem.py` renders a clean 300 dpi PNG/PDF with
   Pillow. No license, watermark, network, NumPy, pandas, or matplotlib needed.
+- **Need advanced layouts?** `scripts/plot_advanced.py` adds multi-panel,
+  dual Y, insets, broken axes, 3D, contours, heatmaps, bars, pies, boxes,
+  error bands, vector PDF, and arbitrary nonlinear fitting via matplotlib/scipy.
 - **Have Origin?** `scripts/origin_plot.ps1` builds a real `.opju`, exports
   PNG/PDF, and refuses to deliver a demo-watermarked image.
 
@@ -16,8 +19,11 @@ This repository is also a Codex skill. Copy it to
 
 - CSV/TSV/XLSX input; choose X and Y columns by header.
 - Optional Y error bars and scatter/line/line+symbol styles.
+- Multi-series, multi-panel, dual Y axes, insets, broken axes, error bands,
+  bars, pies, boxes, heatmaps, contours and 3D surfaces in advanced mode.
 - Fitting: automatic, linear, quadratic, exponential, power, logarithmic,
   Langmuir (saturation), or none.
+- Arbitrary nonlinear formulas with `scipy.optimize.curve_fit` in advanced mode.
 - Auto mode fits every valid model and selects by AICc, preferring the simpler
   linear model when it is statistically close.
 - 300 dpi PNG/PDF plus a plain-text fit report.
@@ -91,6 +97,74 @@ R2 = 0.999999
 If the user names a model, pass it explicitly. If not, use `auto` and state the
 selected model and constraints in the result.
 
+## Advanced mode
+
+Install the heavier dependencies only when needed:
+
+```powershell
+pip install -r requirements-advanced.txt
+```
+
+Advanced figures are described by a JSON spec:
+
+```powershell
+python scripts/plot_advanced.py `
+  --spec examples/advanced/advanced_xy.json `
+  --outdir advanced_output --name figure
+```
+
+That example combines multi-panel layout, dual Y axes, an inset, a y-broken
+axis, an error band, custom ticks/legend, and a nonlinear
+`a*exp(-b*x)+c` fit. A six-panel gallery is in
+`examples/advanced/advanced_gallery.json`:
+
+```powershell
+python scripts/plot_advanced.py `
+  --spec examples/advanced/advanced_gallery.json `
+  --outdir advanced_output --name gallery
+```
+
+Spec shape:
+
+```json
+{
+  "data": "data.csv",
+  "figsize": [10, 7.5],
+  "layout": {"rows": 2, "cols": 2},
+  "panels": [
+    {
+      "type": "xy",
+      "series": [
+        {"label": "Run 1", "x": "t", "y": "A", "color": "#d62728", "line": true},
+        {"label": "Run 2", "x": "t", "y": "B", "axis": "right"}
+      ],
+      "xlim": [0, 10], "xticks": [0, 5, 10],
+      "legend": {"loc": "upper right"}
+    }
+  ]
+}
+```
+
+Panel types: `xy`, `bar`, `pie`, `box`, `heatmap`, `contour`, `3d`.
+XY panels support `series`, dual `axis: "right"`, `band`, `fit`, `inset`,
+`broken: {"x": [...]}` or `{"y": [...]}`, custom limits/ticks, and legend
+placement. The advanced renderer writes a true vector PDF for line/text plots;
+heatmaps and surfaces naturally embed raster layers.
+
+Nonlinear fit example:
+
+```json
+"fit": {
+  "formula": "a*exp(-b*x)+c",
+  "params": ["a", "b", "c"],
+  "p0": [0.7, 0.05, 0.1],
+  "bounds": [[0, 0, -1], [2, 1, 1]]
+}
+```
+
+The formula is parsed with a whitelist (`x`, declared parameters, arithmetic,
+`exp`, `log`, `sin`, `cos`, `sqrt`); arbitrary Python is rejected.
+
 ## Chemistry recipes
 
 | Experiment | Plot |
@@ -152,12 +226,15 @@ script exits `3` and produces no formal figure.
 # No Origin required
 python tests/test_plot_chem.py
 powershell -File tests/smoke_test.ps1
+pip install -r requirements-advanced.txt
+python tests/test_advanced.py
 
 # Full Origin integration on an activated Windows desktop
 powershell -File tests/smoke_test.ps1 -WithOrigin
 ```
 
-GitHub Actions runs the no-Origin Python test and the PowerShell dry-run test.
+GitHub Actions runs the no-Origin Python test, the advanced matplotlib/scipy
+test, and the PowerShell dry-run test.
 
 ## Troubleshooting
 
@@ -165,15 +242,16 @@ GitHub Actions runs the no-Origin Python test and the PowerShell dry-run test.
 |---|---|
 | `Pillow is required` | `pip install pillow` |
 | `.xlsx` input fails | `pip install openpyxl` |
+| Advanced spec fails to import matplotlib/scipy | `pip install -r requirements-advanced.txt` |
 | Chinese labels show boxes | Install a CJK font (SimHei/Noto Sans CJK); Windows fonts are auto-detected |
 | Auto picks a surprising model | Pass `--fit linear` (or another model) explicitly |
 | Origin COM error / demo watermark | See [SKILL.md](SKILL.md); activate Origin or use the no-Origin plotter |
 
 ## Scope
 
-One X/Y series per figure; multi-panel layouts, 3D plots, and arbitrary
-user-supplied formulas are out of scope. Named models cover common chemistry
-labs.
+The lightweight renderer handles one X/Y series per figure. Use the advanced
+JSON renderer for multi-series, multi-panel, 3D and arbitrary formulas. Dual Y
+combined with a broken axis is intentionally rejected; use separate panels.
 
 ## License
 
