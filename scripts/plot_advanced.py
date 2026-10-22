@@ -330,7 +330,8 @@ def render_xy(fig, ax, panel, rows, report, panel_name, small=False):
                        fontsize=8 if small else 9)
     if panel.get("inset") and not small:
         bounds = panel["inset"].get("bounds", [0.62, 0.62, 0.3, 0.3])
-        iax = ax.inset_axes(bounds)
+        parent = axes[-1] if broken else ax
+        iax = parent.inset_axes(bounds)
         render_xy(fig, iax, panel["inset"], rows, report, panel_name + "/inset", small=True)
     return axes[0]
 
