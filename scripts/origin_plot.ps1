@@ -1,17 +1,19 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)][string]$Csv,
-    [Parameter(Mandatory = $true)][string]$X,
-    [Parameter(Mandatory = $true)][string]$Y,
+    [string]$Csv,
+    [string]$X,
+    [string]$Y,
     [string]$Title,
     [string]$XLabel,
     [string]$YLabel,
     [string]$OutDir = '.\origin_output',
     [string]$Name = 'origin_plot',
+    [string]$OriginExe,
     [switch]$Fit,
     [switch]$Pdf,
     [switch]$NoExport,
-    [switch]$DryRun
+    [switch]$DryRun,
+    [switch]$DetectOnly
 )
 
 Set-StrictMode -Version Latest
@@ -29,6 +31,143 @@ function Assert-Ascii([string]$Value, [string]$What) {
 
 function Format-Num([double]$Value) {
     return $Value.ToString('R', $inv)
+}
+
+function Find-OriginExecutable([string]$Override) {
+    if ($Override) {
+        $resolved = [System.IO.Path]::GetFullPath($Override)
+        if (-not (Test-Path -LiteralPath $resolved -PathType Leaf)) {
+            throw "Origin executable not found: $resolved"
+        }
+        return $resolved
+    }
+
+    $candidates = New-Object System.Collections.Generic.List[string]
+    $uninstallRoots = @(
+        'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
+        'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall',
+        'Registry::HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall'
+    )
+    foreach ($root in $uninstallRoots) {
+        if (-not (Test-Path $root)) { continue }
+        foreach ($key in @(Get-ChildItem $root -ErrorAction SilentlyContinue)) {
+            $app = Get-ItemProperty $key.PSPath -ErrorAction SilentlyContinue
+            if (-not $app -or -not $app.PSObject.Properties['DisplayName']) { continue }
+            if ([string]$app.DisplayName -notmatch '^Origin') { continue }
+
+            $icon = if ($app.PSObject.Properties['DisplayIcon']) { [string]$app.DisplayIcon } else { '' }
+            if ($icon -match '^\s*"([^"]+\.exe)"') {
+                $candidates.Add($Matches[1])
+            }
+            elseif ($icon -match '^\s*([^\s,]+\.exe)') {
+                $candidates.Add($Matches[1])
+            }
+
+            if ($app.PSObject.Properties['InstallLocation'] -and $app.InstallLocation) {
+                $candidates.Add((Join-Path ([string]$app.InstallLocation) 'Origin64.exe'))
+            }
+        }
+    }
+
+    $programRoots = @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:ProgramW6432) |
+        Where-Object { $_ -and (Test-Path -LiteralPath $_) } |
+        Select-Object -Unique
+    foreach ($root in $programRoots) {
+        $originRoot = Join-Path $root 'OriginLab'
+        if (-not (Test-Path -LiteralPath $originRoot)) { continue }
+        foreach ($dir in @(Get-ChildItem -LiteralPath $originRoot -Directory -ErrorAction SilentlyContinue)) {
+            $candidates.Add((Join-Path $dir.FullName 'Origin64.exe'))
+        }
+    }
+
+    $command = Get-Command 'Origin64.exe' -CommandType Application -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if ($command) { $candidates.Add($command.Source) }
+
+    $found = New-Object System.Collections.Generic.List[object]
+    foreach ($candidate in @($candidates | Select-Object -Unique)) {
+        if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) { continue }
+        $file = Get-Item -LiteralPath $candidate
+        $version = $null
+        try { $version = [version]$file.VersionInfo.ProductVersion } catch {}
+        $found.Add([pscustomobject]@{
+            Path = $file.FullName
+            Version = $(if ($version) { $version } else { [version]'0.0' })
+        })
+    }
+
+    $best = $found | Sort-Object -Property @{ Expression = 'Version'; Descending = $true },
+        @{ Expression = 'Path'; Descending = $false } | Select-Object -First 1
+    if ($best) { return $best.Path }
+    return $null
+}
+
+function Get-OriginUserStatus {
+    $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+    $identityUser = ($identity.Name -split '\\')[-1]
+    $profileUser = Split-Path -Leaf $env:USERPROFILE
+    $matchesDesktopUser = $identityUser -ieq $profileUser
+    $isInteractive = [Environment]::UserInteractive -and ([System.Diagnostics.Process]::GetCurrentProcess().SessionId -ne 0)
+    return [pscustomobject]@{
+        Identity = $identity.Name
+        UserProfile = $env:USERPROFILE
+        IsInteractive = $isInteractive
+        MatchesDesktopUser = $matchesDesktopUser
+        CanUseCom = $isInteractive -and $matchesDesktopUser
+    }
+}
+
+function Register-OriginCom([string]$Executable) {
+    $definitions = @(
+        @{ ProgId = 'Origin.Application'; Clsid = '{B0F21977-8AAB-4632-A73D-528B909C5663}' },
+        @{ ProgId = 'Origin.ApplicationSI'; Clsid = '{2F234A01-A4EB-4EAB-A130-A13C97953F0B}' },
+        @{ ProgId = 'Origin.ApplicationCOMSI'; Clsid = '{9FE89513-7A1C-4229-8DF1-AB272A668E52}' }
+    )
+    $classes = 'HKCU:\Software\Classes'
+    foreach ($definition in $definitions) {
+        $progId = Join-Path $classes $definition.ProgId
+        New-Item -Path $progId -Force | Out-Null
+        Set-Item -Path $progId -Value 'Origin Automation Server'
+        New-Item -Path (Join-Path $progId 'CLSID') -Force | Out-Null
+        Set-Item -Path (Join-Path $progId 'CLSID') -Value $definition.Clsid
+
+        $clsid = Join-Path (Join-Path $classes 'CLSID') $definition.Clsid
+        New-Item -Path $clsid -Force | Out-Null
+        Set-Item -Path $clsid -Value $definition.ProgId
+        $server = Join-Path $clsid 'LocalServer32'
+        New-Item -Path $server -Force | Out-Null
+        Set-Item -Path $server -Value ('"' + $Executable + '"')
+    }
+}
+
+function Test-OriginComRegistration([string]$Executable) {
+    $progId = 'Registry::HKEY_CLASSES_ROOT\Origin.ApplicationSI\CLSID'
+    if (-not (Test-Path $progId)) { return $false }
+    $clsid = (Get-ItemProperty $progId -ErrorAction SilentlyContinue).'(default)'
+    if (-not $clsid) { return $false }
+    $server = "Registry::HKEY_CLASSES_ROOT\CLSID\$clsid\LocalServer32"
+    if (-not (Test-Path $server)) { return $false }
+    $registered = [string](Get-ItemProperty $server -ErrorAction SilentlyContinue).'(default)'
+    if (-not $registered) { return $false }
+    $registered = $registered.Trim().Trim('"')
+    return [string]::Equals(
+        [System.IO.Path]::GetFullPath($registered),
+        [System.IO.Path]::GetFullPath($Executable),
+        [System.StringComparison]::OrdinalIgnoreCase)
+}
+
+function New-OriginCom([string]$Executable) {
+    try {
+        return New-Object -ComObject Origin.ApplicationSI
+    }
+    catch {
+        $hresult = $_.Exception.HResult
+        $classMissing = $hresult -eq [int]0x80040154
+        $serverMissing = $hresult -eq [int]0x80070002
+        if (-not ($classMissing -or $serverMissing)) { throw }
+        Register-OriginCom $Executable
+        return New-Object -ComObject Origin.ApplicationSI
+    }
 }
 
 function Test-DemoWatermark([string]$Path) {
@@ -63,8 +202,43 @@ function Test-DemoWatermark([string]$Path) {
 $origin = $null
 $tempBase = $null
 try {
+    $originExecutable = $null
+    $originUser = $null
+    if (-not $DryRun) {
+        $originExecutable = Find-OriginExecutable $OriginExe
+        $originUser = Get-OriginUserStatus
+        if ($DetectOnly) {
+            Write-Output "Origin: $(if ($originExecutable) { $originExecutable } else { 'not found' })"
+            Write-Output "User: $($originUser.Identity)"
+            Write-Output "Desktop context: $($originUser.CanUseCom)"
+            if ($originExecutable) {
+                Write-Output "COM ready from this process: $($originUser.CanUseCom)"
+                if (-not $originUser.CanUseCom) {
+                    Write-Output 'Fix: rerun from an interactive terminal owned by the desktop user.'
+                }
+            }
+            else {
+                Write-Output 'Fix: install Origin, put Origin64.exe on PATH, or pass -OriginExe.'
+                exit 1
+            }
+            return
+        }
+        if (-not $originExecutable) {
+            throw 'ORIGIN_NOT_FOUND: Origin64.exe was not found. Pass -OriginExe with the installed executable path.'
+        }
+        if (-not $originUser.CanUseCom) {
+            throw "SANDBOX: Origin COM requires the interactive desktop user. Current identity is '$($originUser.Identity)' but the desktop profile is '$($originUser.UserProfile)'. Rerun the command in a desktop-user terminal; Origin was found at '$originExecutable'."
+        }
+        if ($OriginExe -and -not (Test-OriginComRegistration $originExecutable)) {
+            Register-OriginCom $originExecutable
+        }
+    }
+
     if (-not $DryRun -and (Get-Process -Name Origin64 -ErrorAction SilentlyContinue)) {
         throw 'Origin is already running. Close it first; this script starts and closes its own instance.'
+    }
+    if (-not $Csv -or -not $X -or -not $Y) {
+        throw 'Csv, X and Y are required unless -DetectOnly is used.'
     }
     if (-not (Test-Path -LiteralPath $Csv)) {
         throw "CSV not found: $Csv"
@@ -187,7 +361,7 @@ try {
         return
     }
 
-    $origin = New-Object -ComObject Origin.ApplicationSI
+    $origin = New-OriginCom $originExecutable
     $origin.Visible = 1
     if (-not $origin.Execute([System.IO.File]::ReadAllText($ogs))) {
         throw 'Origin rejected the generated LabTalk script.'
@@ -231,7 +405,9 @@ try {
 catch {
     $message = $_.Exception.Message
     [Console]::Error.WriteLine($message)
-    exit $(if ($message -like 'DEMO:*') { 3 } else { 1 })
+    if ($message -like 'DEMO:*') { exit 3 }
+    if ($message -like 'SANDBOX:*') { exit 2 }
+    exit 1
 }
 finally {
     if ($origin) { try { $origin.Exit() } catch {} }

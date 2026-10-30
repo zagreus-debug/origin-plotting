@@ -101,8 +101,17 @@ This path is scatter + linear fit only. Labels and paths must be ASCII.
 
 Hard-won Origin rules:
 
+- Run `powershell -File scripts/origin_plot.ps1 -DetectOnly` first. The script
+  finds `Origin64.exe` from the Windows uninstall registry and standard
+  `OriginLab` folders; use `-OriginExe` for portable/custom installations.
 - Run COM in the interactive desktop session. Under a sandbox account Origin
-  shows the "User Files Folder" dialog and COM fails with `0x80080005`.
+  shows the "User Files Folder" dialog and COM fails with `0x80080005`. The
+  script now exits `2` before that dialog when the Windows identity does not
+  match the desktop profile. Rerun under the desktop user; do not click through
+  the dialog.
+- If the COM ProgID exists but its CLSID registration is stale, the script
+  repairs only the current user's `HKCU\Software\Classes` entries from the
+  discovered executable and retries.
 - Stage files in `%TEMP%` or the Origin User Files folder, then copy to the
   final output folder. Non-ASCII paths break LabTalk file commands.
 - `$o.Save(path)` is reliable; `save -i` can return True and write nothing.
@@ -127,6 +136,8 @@ Hard-won Origin rules:
 | `.xlsx` fails | Missing openpyxl | `pip install openpyxl` |
 | Advanced spec imports fail | Missing matplotlib/scipy | `pip install -r requirements-advanced.txt` |
 | Auto picks a surprising model | AICc preference | Pass `--fit` explicitly |
+| `Origin64.exe was not found` | Install is custom/portable | Run `-DetectOnly`; pass `-OriginExe` |
 | COM `0x80080005`, UFF dialog | Sandbox account | Run in the desktop session |
+| Exit code `2`, desktop context false | Sandbox identity | Rerun from the desktop user's terminal |
 | Origin export false, no file | Demo/unlicensed | Activate Origin; stop |
 | Origin save true, file missing | `save -i` or non-ASCII path | `$o.Save()` to ASCII path |

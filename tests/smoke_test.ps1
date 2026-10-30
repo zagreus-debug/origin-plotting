@@ -35,6 +35,26 @@ Assert ($ogs -match 'R2 = 0\.999') 'fit quality label is generated'
     -Csv $csv -X does_not_exist -Y ln_p_p0 -OutDir $out -Name bad -DryRun
 Assert ($LASTEXITCODE -eq 1) 'missing column is rejected'
 
+$detectOutput = @(& $ps -NoProfile -ExecutionPolicy Bypass -File $script -DetectOnly 2>&1 |
+    ForEach-Object { [string]$_ })
+$detectCode = $LASTEXITCODE
+Assert ($detectCode -eq 0 -or $detectCode -eq 1) 'Origin detection exits with a documented status'
+Assert (($detectOutput -join "`n") -match '^Origin: ') 'Origin detection reports the executable status'
+
+if ($detectCode -eq 1) {
+    Assert (($detectOutput -join "`n") -match 'Origin64\.exe was not found') 'missing Origin has an actionable diagnostic'
+}
+elseif (($detectOutput -join "`n") -match 'Desktop context: False') {
+    & $ps -NoProfile -ExecutionPolicy Bypass -File $script `
+        -Csv $csv -X invT_K -Y ln_p_p0 -OutDir $out -Name sandbox_guard
+    Assert ($LASTEXITCODE -eq 2) 'sandbox context is rejected before COM activation'
+    Assert (-not (Get-Process -Name Origin64 -ErrorAction SilentlyContinue)) 'sandbox guard does not launch Origin'
+}
+
+& $ps -NoProfile -ExecutionPolicy Bypass -File $script `
+    -DetectOnly -OriginExe (Join-Path $repo 'missing-origin.exe')
+Assert ($LASTEXITCODE -eq 1) 'invalid explicit Origin path is rejected'
+
 if (-not $WithOrigin) {
     Write-Output 'SKIP: Origin integration (run with -WithOrigin on a licensed Windows desktop).'
     Write-Output 'ALL CHECKS DONE'

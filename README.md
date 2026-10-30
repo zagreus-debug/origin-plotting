@@ -240,6 +240,24 @@ Use this only when the user asks for `.opju` or an actual Origin export, and
 Origin is installed and activated:
 
 ```powershell
+powershell -File scripts/origin_plot.ps1 -DetectOnly
+```
+
+This reports the discovered `Origin64.exe` and whether the current terminal is
+the interactive desktop user. Discovery checks the Windows uninstall registry
+and standard `OriginLab` install folders, so an existing installation on the
+system drive does not need to be on `PATH`. If a portable/custom install is not
+found, pass `-OriginExe "C:\path\to\Origin64.exe"`.
+
+If the ProgID exists but its COM registration is incomplete, the plotter repairs
+only the current user's `HKCU\Software\Classes` entries from the discovered
+executable before retrying. It also fails with exit code `2` before launching
+Origin when the process is running under a sandbox identity with a different
+desktop profile. In that case, rerun from an interactive terminal owned by the
+desktop user; clicking through Origin's "User Files Folder" dialog will not fix
+the COM identity mismatch.
+
+```powershell
 powershell -File scripts/origin_plot.ps1 `
   -Csv examples/clausius_clapeyron.csv `
   -X invT_K -Y ln_p_p0 -Fit `
@@ -277,6 +295,9 @@ test, and the PowerShell dry-run test.
 | Advanced spec fails to import matplotlib/scipy | `pip install -r requirements-advanced.txt` |
 | Chinese labels show boxes | Install a CJK font (SimHei/Noto Sans CJK); Windows fonts are auto-detected |
 | Auto picks a surprising model | Pass `--fit linear` (or another model) explicitly |
+| Origin not found | Run `scripts/origin_plot.ps1 -DetectOnly`, then pass `-OriginExe` |
+| Origin COM exit `2` | Rerun from the interactive desktop user's terminal |
+| Origin COM registration is stale | The script repairs per-user registration from the installed executable |
 | Origin COM error / demo watermark | See [SKILL.md](SKILL.md); activate Origin or use the no-Origin plotter |
 
 ## Scope
