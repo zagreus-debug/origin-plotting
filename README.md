@@ -240,7 +240,7 @@ Use this only when the user asks for `.opju` or an actual Origin export, and
 Origin is installed and activated:
 
 ```powershell
-powershell -File scripts/origin_plot.ps1 -DetectOnly
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/origin_plot.ps1 -DetectOnly
 ```
 
 This reports the discovered `Origin64.exe` and whether the current terminal is
@@ -258,7 +258,7 @@ desktop user; clicking through Origin's "User Files Folder" dialog will not fix
 the COM identity mismatch.
 
 ```powershell
-powershell -File scripts/origin_plot.ps1 `
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/origin_plot.ps1 `
   -Csv examples/clausius_clapeyron.csv `
   -X invT_K -Y ln_p_p0 -Fit `
   -Title "Saturated Vapor Pressure of Water" `

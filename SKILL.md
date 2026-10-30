@@ -90,7 +90,7 @@ Advanced line/text PDFs are vector; heatmaps and surfaces embed raster layers.
 ## Origin workflow
 
 ```powershell
-powershell -File scripts/origin_plot.ps1 `
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/origin_plot.ps1 `
   -Csv data.csv -X invT_K -Y ln_p_p0 -Fit `
   -Title "Saturated Vapor Pressure" `
   -XLabel "1/T (K^-1)" -YLabel "ln(p/p0)" `
@@ -101,7 +101,9 @@ This path is scatter + linear fit only. Labels and paths must be ASCII.
 
 Hard-won Origin rules:
 
-- Run `powershell -File scripts/origin_plot.ps1 -DetectOnly` first. The script
+- Run `powershell -NoProfile -ExecutionPolicy Bypass -File
+  scripts/origin_plot.ps1 -DetectOnly` first. The process-only policy override
+  avoids systems where local `.ps1` files are blocked. The script
   finds `Origin64.exe` from the Windows uninstall registry and standard
   `OriginLab` folders; use `-OriginExe` for portable/custom installations.
 - Run COM in the interactive desktop session. Under a sandbox account Origin
